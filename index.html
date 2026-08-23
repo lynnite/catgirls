@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pinterest Gallery</title>
+  <title>catgirls</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -43,7 +43,7 @@
     }
     .filter-btn:hover { background: #2a2a32; color: #fff; }
     .filter-btn.active {
-      background: #e60023;
+      background: #26262e;
       color: #fff;
     }
 
@@ -143,7 +143,7 @@
         const res = await fetch("metadata.json");
         imageData = await res.json();
         renderFilters();
-        renderGallery("all");
+        filterGallery("all");
       } catch (err) {
         console.error("Failed to load metadata.json:", err);
       }
@@ -160,7 +160,13 @@
 
     function filterGallery(category, btn) {
       document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
-      if (btn) btn.classList.add("active");
+      
+      if (!btn) {
+        const defaultBtn = document.querySelector(".filter-btn");
+        if (defaultBtn) defaultBtn.classList.add("active");
+      } else {
+        btn.classList.add("active");
+      }
 
       const filtered = category === "all" 
         ? imageData 
