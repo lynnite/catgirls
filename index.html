@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pinterest Gallery</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #0f0f11;
+      color: #ffffff;
+      padding: 20px;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    h1 { font-size: 2rem; margin-bottom: 20px; }
+    
+    .filter-bar {
+      display: inline-flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0;
+      border: 1px solid #333;
+      margin-bottom: 30px;
+    }
+    .filter-btn {
+      background: #1e1e24;
+      border: none;
+      border-right: 1px solid #333;
+      color: #ccc;
+      padding: 10px 18px;
+      border-radius: 0;
+      cursor: pointer;
+      text-transform: capitalize;
+      font-weight: 500;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+    .filter-btn:last-child {
+      border-right: none;
+    }
+    .filter-btn:hover { background: #2a2a32; color: #fff; }
+    .filter-btn.active {
+      background: #e60023;
+      color: #fff;
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #18181c;
+      border-radius: 0;
+      overflow: hidden;
+      border: 1px solid #26262e;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .card:hover { transform: translateY(-4px); }
+    .card img {
+      width: 100%;
+      height: 260px;
+      object-fit: cover;
+      display: block;
+      border-radius: 0;
+    }
+    .card-info {
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .file-number {
+      font-size: 0.9rem;
+      font-family: monospace;
+      font-weight: bold;
+      color: #aaa;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      max-width: 90%;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 0;
+      box-shadow: 0 0 20px rgba(0,0,0,0.8);
+    }
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      color: #ffffff;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+    }
+    .modal-close:hover {
+      color: #e60023;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Gallery</h1>
+    <div class="filter-bar" id="filterBar"></div>
+  </header>
+
+  <main class="gallery" id="gallery"></main>
+
+  <div class="modal" id="imageModal" onclick="closeModal(event)">
+    <span class="modal-close" onclick="closeModal(event)">&times;</span>
+    <img class="modal-content" id="modalImage" src="" alt="Full view">
+  </div>
+
+  <script>
+    const categories = ["all", "black", "white", "gray", "red", "orange", "yellow", "green", "blue", "purple", "pink", "other"];
+    let imageData = [];
+
+    async function init() {
+      try {
+        const res = await fetch("metadata.json");
+        imageData = await res.json();
+        renderFilters();
+        renderGallery("all");
+      } catch (err) {
+        console.error("Failed to load metadata.json:", err);
+      }
+    }
+
+    function renderFilters() {
+      const filterBar = document.getElementById("filterBar");
+      filterBar.innerHTML = categories.map(cat => `
+        <button class="filter-btn ${cat === 'all' ? 'active' : ''}" onclick="filterGallery('${cat}', this)">
+          ${cat}
+        </button>
+      `).join('');
+    }
+
+    function filterGallery(category, btn) {
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      if (btn) btn.classList.add("active");
+
+      const filtered = category === "all" 
+        ? imageData 
+        : imageData.filter(item => item.category === category);
+
+      renderCards(filtered);
+    }
+
+    function renderCards(items) {
+      const gallery = document.getElementById("gallery");
+      if (items.length === 0) {
+        gallery.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #666;">No images match this category.</p>`;
+        return;
+      }
+
+      gallery.innerHTML = items.map(item => `
+        <div class="card" onclick="openModal('${item.local_path}')">
+          <img src="${item.local_path}" alt="${item.filename}" loading="lazy">
+          <div class="card-info">
+            <span class="file-number">#${item.id}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function openModal(imageSrc) {
+      const modal = document.getElementById("imageModal");
+      const modalImg = document.getElementById("modalImage");
+      modalImg.src = imageSrc;
+      modal.classList.add("active");
+    }
+
+    function closeModal(event) {
+      if (event.target.id === "imageModal" || event.target.classList.contains("modal-close")) {
+        document.getElementById("imageModal").classList.remove("active");
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById("imageModal").classList.remove("active");
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
